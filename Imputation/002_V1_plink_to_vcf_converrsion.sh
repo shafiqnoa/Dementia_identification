@@ -1,6 +1,6 @@
 ## A protocol is available here: https://www.protocols.io/view/genotype-imputation-workflow-v3-0-nmndc5e?version_warning=no&step=1
 ## I am doing following work to prepare file to be imputed using sanger imputation service https://imputation.sanger.ac.uk/ 
-
+## https://shicheng-guo.github.io/blog/page2/
 
 # Files are bacth wise
 # Merging all plink file
@@ -144,7 +144,7 @@ bcftools index -f 00_All_renamed_dbsnpchr.vcf.gz
 
 
 
-# creatingg file with 22 autosomes only as our vcf does not have X,Y and MT varriants.
+# creating file with 22 autosomes only as our vcf does not have X,Y and MT varriants.
 
 bcftools view 00_All_renamed_dbsnpchr.vcf.gz --regions chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 > 00_All_renamed_dbsnpchr1_22.vcf.gz
 bcftools view 00_All_renamed_dbsnpchr1_22.vcf.gz -Oz -o 00_All_renamed_dbsnpchr1_22.vcf.gz
@@ -266,45 +266,94 @@ plink \
 
 # Allele frequency checking 
 
-# 1000 genome as reference panel: .bim file used here created from VCF filr after QC
-perl /rds/project/rds-csoP2nj6Y6Y/msr52/SOFTWARES/Apps/HRC-1000G-check-bim.pl \
--b vresion3_v1_h19_aligned_merged_renamed_temp.bim \
--f vresion3_v1_h19_aligned_merged_renamed_temp.frq \
--r /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/1000GP_Phase3_combined.legend.gz \
--g \
--p EUR 
+
 
 # HRC as reference panel: .bim file used here created from VCF filr after QC
 perl /rds/project/rds-csoP2nj6Y6Y/msr52/SOFTWARES/Apps/HRC-1000G-check-bim.pl \
--b vresion3_v1_h19_aligned_merged_renamed_temp.bim \
--f vresion3_v1_h19_aligned_merged_renamed_temp.frq \
+-b /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/vresion3_v1_h19_aligned_merged_renamed_temp.bim \
+-f /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/vresion3_v1_h19_aligned_merged_renamed_temp.frq \
 -r /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/HRC.r1-1.GRCh37.wgs.mac5.sites.tab \
+-t 0.1 \
 -h \
 -p EUR 
 
-# 1000 genome as reference panel: .bim file used here comes from original files when merged together, no QC was performed 
-perl /rds/project/rds-csoP2nj6Y6Y/msr52/SOFTWARES/Apps/HRC-1000G-check-bim.pl \
--b v1_chip_extra_merged.bim \
--f v1_chip_extra_merged.frq \
--r /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/1000GP_Phase3_combined.legend.gz \
--g \
--p EUR 
+SNPs not changed 88125
+SNPs to change ref alt 557808
+Strand ok 645933
+Total Strand ok 645933
+
 
 # HRC as reference panel: .bim file used here comes from original files when merged together, no QC was performed 
 perl /rds/project/rds-csoP2nj6Y6Y/msr52/SOFTWARES/Apps/HRC-1000G-check-bim.pl \
--b v1_chip_extra_merged.bim \
--f v1_chip_extra_merged.frq \
+-b /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/v1_chip_extra_merged.bim \
+-f /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/v1_chip_extra_merged.frq \
 -r /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/HRC.r1-1.GRCh37.wgs.mac5.sites.tab \
 -h \
--p EUR 
+-t 0.2 \
+-p EUR \
+-o /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/Allele_freq_check
+
+SNPs not changed 91869
+SNPs to change ref alt 594034
+Strand ok 685897
+Total Strand ok 685903
+
+
+#EXecute this
+# before running this plink need to be loaded and this file need to modified
+
+sh Run-plink.sh # dont run but modify
+
+#Modified version is runned 
+
+sh Run-plink-modified.sh
+
+# check content of new VCF file
+less v1_chip_extra_merged-updated.vcf.gz
+module add bcftools-1.9-gcc-5.4.0-b2hdt5n
+bcftools stats v1_chip_extra_merged-updated.vcf.gz | awk '/^SN/'
+bcftools index -f v1_chip_extra_merged-updated.vcf.gz
+
+
+# changing chromosome names as hg19 file has "chr" added to chromosome name
+module add bcftools-1.9-gcc-5.4.0-b2hdt5n
+bcftools annotate -Oz --rename-chrs /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/chr_change.txt v1_chip_extra_merged-updated.vcf.gz > v1_chip_extra_merged-updated_renamed.vcf.gz
+
+bcftools index v1_chip_extra_merged-updated_renamed.vcf.gz
+
+# New file checking against hg19 as we did in line above at 102
+/rds/project/rds-csoP2nj6Y6Y/msr52/SOFTWARES/Apps/bcftools/bcftools +fixref /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/v1_chip_extra/Allele_freq_check/v1_chip_extra_merged-updated_renamed.vcf.gz -- -f /rds/project/rds-csoP2nj6Y6Y/msr52/Imputation_required/hg19.fa
+
+# SC, guessed strand convention
+SC	TOP-compatible	0
+SC	BOT-compatible	0
+# ST, substitution types
+ST	A>C	26624	3.9%
+ST	A>G	111769	16.3%
+ST	A>T	3786	0.6%
+ST	C>A	31393	4.6%
+ST	C>G	15949	2.3%
+ST	C>T	153068	22.3%
+ST	G>A	153157	22.3%
+ST	G>C	16383	2.4%
+ST	G>T	31176	4.5%
+ST	T>A	3829	0.6%
+ST	T>C	111773	16.3%
+ST	T>G	26675	3.9%
+# NS, Number of sites:
+NS	total        	685582
+NS	ref match    	685582	100.0%
+NS	ref mismatch 	0	0.0%
+NS	skipped      	0
+NS	non-ACGT     	0
+NS	non-SNP      	0
+NS	non-biallelic	0
 
 
 
 
 
-
-
-
+# Manual check shows some of the SNPs have affymatrix ID, need to change them
 
 
 
